@@ -11,3 +11,6 @@ scikit-learn
 packgenlite @ git+https://github.com/krokrob/packgenlite.git@master
 
 nbdime
+streamlit
+requests
+plotly
