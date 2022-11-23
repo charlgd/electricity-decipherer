@@ -14,3 +14,4 @@ nbdime
 streamlit
 requests
 plotly
+json
