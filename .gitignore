@@ -15,6 +15,7 @@ __pycache__
 *PKG-INFO
 *.egg-info
 *.csv
+*.json
 *.zip
 mlruns
 *.sqlite
