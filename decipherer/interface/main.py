@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from decipherer.ml_logic.encoders import ffill_nan, add_datetime_features
+#from decipherer.ml_logic.encoders import ffill_nan, add_datetime_features
 
 def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     """
@@ -25,9 +25,10 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
         ))
 
     pipeline = load_pipeline()
-    y_pred = pipeline.predict(X_pred)
+    y_pred = pd.DataFrame(pipeline.predict(X_pred))
+    y_pred['datetime'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time'])
 
-    print("\n✅ prediction done: ", y_pred, y_pred.shape)
+    print("\n✅ prediction done: ", y_pred.head(), y_pred.shape)
 
     return y_pred
 
