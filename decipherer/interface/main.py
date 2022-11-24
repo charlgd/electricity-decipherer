@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
 
-#from decipherer.ml_logic.encoders import ffill_nan, add_datetime_features
-
 def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     """
     Make a prediction using the latest trained model
@@ -25,7 +23,10 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
         ))
 
     pipeline = load_pipeline()
+
     y_pred = pd.DataFrame(pipeline.predict(X_pred))
+
+    y_pred.columns = ['kitchen', 'laundry', 'heating room']
     y_pred['datetime'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time'])
 
     print("\n✅ prediction done: ", y_pred.head(), y_pred.shape)

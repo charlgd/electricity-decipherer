@@ -16,3 +16,8 @@ requests
 plotly
 colorama
 joblib
+
+# API
+fastapi
+pytz
+uvicorn
