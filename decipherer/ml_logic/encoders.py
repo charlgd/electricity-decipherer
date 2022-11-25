@@ -12,7 +12,7 @@ def add_datetime_features(X):
     X_rep = X.copy()
 
     # Handle datetime format
-    datetime = pd.to_datetime(X_rep['date'] + ' ' + X_rep['time'])
+    datetime = pd.to_datetime(X_rep['date'] + ' ' + X_rep['time'], format="%d/%m/%Y %H:%M:%S")
 
     # Create new features using month, weekday, hour and minute
     X_rep['month'] = datetime.dt.month
