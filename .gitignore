@@ -25,8 +25,10 @@ mlruns
 # IDE #
 *.vscode
 
-data/
+/data
 
 .env
 .envrc
 .python-version
+
+/training_outputs
