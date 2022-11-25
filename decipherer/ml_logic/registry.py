@@ -57,7 +57,7 @@ def load_pipeline() -> Pipeline:
 
     pipeline_path = sorted(results)[-1]
     print(f"- path: {pipeline_path}")
-    #breakpoint()
+
     pipeline = load(pipeline_path)
     print("\n✅ pipeline loaded from disk")
 
