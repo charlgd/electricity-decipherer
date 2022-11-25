@@ -40,18 +40,17 @@ async def index(items: List[Item]):
         # Convert body to pandas dataframe
         X_pred = pd.DataFrame(body, columns=['date', 'time', 'global_active_power', 'global_reactive_power', 'voltage', 'global_intensity', 'global_consumption'])
 
+        print("body")
+
         # Load pipeline from app.state
         pipeline = app.state.pipeline
 
         y_pred = pd.DataFrame(pipeline.predict(X_pred))
 
-        y_pred.columns = ['kitchen', 'laundry', 'heating room']
-        y_pred['datetime'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time']).astype(str)
+        y_pred.columns = ['kitchen', 'laundry_room', 'heating_room']
+        y_pred['date_time'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time'], format="%d/%m/%Y %H:%M:%S").astype(str)
 
-        # Convert dataframe to json
+        # # Convert dataframe to json
         y_pred_json = y_pred.to_json(orient="records")
 
-        # Parse json
-        y_pred_json = json.loads(y_pred_json)
-
-        return JSONResponse(status_code=status.HTTP_200_OK, content=y_pred_json)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=json.loads(y_pred_json))

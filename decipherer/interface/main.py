@@ -26,12 +26,24 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
 
     y_pred = pd.DataFrame(pipeline.predict(X_pred))
 
-    y_pred.columns = ['kitchen', 'laundry', 'heating room']
-    y_pred['datetime'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time'])
+    y_pred.columns = ['kitchen', 'laundry_room', 'heating_room']
+    y_pred['date_time'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time'], format="%d/%m/%Y %H:%M:%S")
 
     print("\n✅ prediction done: ", y_pred.head(), y_pred.shape)
 
     return y_pred
 
 if __name__ == '__main__':
+
+    # Test data
+    # X_pred = pd.DataFrame({
+    #     'date': ['1/1/2010', '2/1/2010', '30/1/2010'],
+    #     'time': ['00:15:00', '10:20:00', '13:50:00'],
+    #     'global_active_power': [10, 10, 10],
+    #     'global_reactive_power': [10, 10, 10],
+    #     'voltage': [10, 10, 10],
+    #     'global_intensity': [10, 10, 10],
+    #     'global_consumption': [10, 10, 10]
+    # })
+
     pred()

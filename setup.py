@@ -14,7 +14,7 @@ setup(name='decipherer',
       url="https://github.com/charlgd/electricity-decipherer.git",
       install_requires=requirements,
       packages=find_packages(),
-    #   include_package_data: to install data from MANIFEST.in
-    #   include_package_data=True,
-    #   zip_safe=False
+      #include_package_data: to install data from MANIFEST.in
+      include_package_data=True,
+      zip_safe=False
 )
