@@ -110,61 +110,6 @@ def graph_bar_test(df):
 
     return st.bar_chart(chart_data)
 
-def input_interface_appliances():
-    '''the interface for appliences,
-    return a list with selected appliences
-    '''
-    user_data_appl = {
-                   'Home':['Hi-Fi','Tv','Video Game console'],
-                   'kitchen':['Blender','Dishwasher','Oven','Toaster','Coffee machine','Microwave','Kettle','air conditioner 1'],
-                   'laundry':['Washer','Dryer'],
-                   'bedroom':['air conditioner 2','heating system 1'],
-                   'bathroom':['heating system 2','sound system']
-                  }
-    appl_by_default = ['Oven','Microwave','Washer','heating system 1']
-
-    user_selected_data =[]
-    user_data_appl_list= []
-    col1, col2, col3  = st.columns((0.4,1,1))
-    with col1:
-        for i, (key, value) in enumerate(user_data_appl.items()):
-            #print(i, key, value)
-            st.markdown("## " + str(key))
-            st.write('  appliences:')
-            for i in range(len(value)):
-                ch = st.checkbox(value[i])
-                #if value[i] in appl_by_default:
-                    #st.checkbox(label = value[i], value =True)
-                user_data_appl_list.append(value[i])
-                user_selected_data.append(ch)
-    with col2:
-        st.write('\n')
-        st.write('\n')
-        st.write('\n')
-        st.write('\n')
-        st.write('\n')
-        number = st.number_input('volt', step=1)
-        number2 = st.number_input('', step=1)
-
-
-    with col3:
-        st.write('\n')
-        st.write('\n')
-        st.write('\n')
-        st.write('\n')
-        st.write('\n')
-        number = st.number_input('pcs', min_value=1, max_value=10, value=1, step=1)
-        number2 = st.number_input('', min_value=1, max_value=10, value=1, step=1)
-
-    #create list of selected appliences:
-    appl = [user_data_appl_list[np.where(user_selected_data)[0][i]] \
-        for i in range(len(np.where(user_selected_data)[0]))]
-    st.write(appl)
-
-
-    return appl
-#----------------------------------
-
 #upload csv file to api:
 uploaded_file = st.file_uploader("", type = "csv")
 analyze_btn = None
@@ -216,28 +161,6 @@ if analyze_btn:
             graph_pie(df_from_api)
             st.subheader("Electricity consumption during the given period")
             graph_bar(df_from_api)
-
-
-                #Appliances
-
-            #analyze_btn_appliances = st.button("Appliances" )
-            #if analyze_btn_appliances:
-            #apl_list = input_interface_appliances()
-            #TEST DATA
-            #random data for test - Appliances:
-
-            apl_list = input_interface_appliances()
-            st.subheader("Random data")
-            n_rows = 50
-            df_a = pd.DataFrame(
-                np.random.randint(100, size=(n_rows, len(apl_list))),
-                columns = apl_list)
-
-            #visual:
-            #st.subheader("Electricity breakdown by Appliances ")
-            #graph_pie(df_a)
-            st.subheader("Electricity consumption Cost during the given period")
-            graph_bar_test(df_a)
 
     except requests.exceptions.RequestException as e:
         raise SystemExit(e)
