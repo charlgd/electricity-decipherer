@@ -14,4 +14,10 @@ nbdime
 streamlit
 requests
 plotly
-json
+colorama
+joblib
+
+# API
+fastapi
+pytz
+uvicorn

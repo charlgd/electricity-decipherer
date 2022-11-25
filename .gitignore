@@ -15,15 +15,20 @@ __pycache__
 *PKG-INFO
 *.egg-info
 *.csv
+*.json
 *.zip
 mlruns
 *.sqlite
+*.joblib
+*.pickle
 
 # IDE #
 *.vscode
 
-data/
+/data
 
 .env
 .envrc
 .python-version
+
+/training_outputs
