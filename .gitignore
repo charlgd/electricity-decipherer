@@ -30,3 +30,6 @@ data/
 .env
 .envrc
 .python-version
+
+# Notebook
+# pipeline_mvp.ipynb
