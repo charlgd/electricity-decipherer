@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
+def room_pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     """
     Make a prediction using the latest trained model
     """
@@ -13,7 +13,7 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     if X_pred is None:
 
         X_pred = pd.DataFrame(dict(
-            date=["2008-07-06"],
+            date=["6/7/2008"],
             time=["17:18:00"],
             global_active_power=2.196,
             global_reactive_power=0.218,
@@ -22,8 +22,7 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
             global_consumption=22.0
         ))
 
-    pipeline = load_pipeline()
-
+    pipeline = load_pipeline(pipeline_type='room')
     y_pred = pd.DataFrame(pipeline.predict(X_pred))
 
     y_pred.columns = ['kitchen', 'laundry_room', 'heating_room']
@@ -46,4 +45,4 @@ if __name__ == '__main__':
     #     'global_consumption': [10, 10, 10]
     # })
 
-    pred()
+    room_pred()

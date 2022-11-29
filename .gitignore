@@ -31,4 +31,9 @@ mlruns
 .envrc
 .python-version
 
+# Notebooks
+notebooks/perso/*
+notebooks/pipeline_mvp.ipynb
+
+
 /training_outputs
