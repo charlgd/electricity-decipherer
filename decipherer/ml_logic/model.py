@@ -13,4 +13,4 @@ class ApplianceEstimator(BaseEstimator):
         for appliance, pct in self.appliances_pct.items():
            y[appliance] = X.iloc[:, 1] * pct
 
-        return y
+        return y.drop(columns=['date_time'])
