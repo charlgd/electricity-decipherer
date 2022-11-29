@@ -3,7 +3,7 @@ import numpy as np
 
 #from decipherer.ml_logic.encoders import ffill_nan, add_datetime_features
 
-def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
+def room_pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     """
     Make a prediction using the latest trained model
     """
@@ -15,7 +15,7 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     if X_pred is None:
 
         X_pred = pd.DataFrame(dict(
-            date=["2008-07-06"],
+            date=["6/7/2008"],
             time=["17:18:00"],
             global_active_power=2.196,
             global_reactive_power=0.218,
@@ -24,7 +24,7 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
             global_consumption=22.0
         ))
 
-    pipeline = load_pipeline()
+    pipeline = load_pipeline(pipeline_type='room')
     y_pred = pd.DataFrame(pipeline.predict(X_pred))
     y_pred['datetime'] = pd.to_datetime(X_pred['date'] + ' ' + X_pred['time'])
 
@@ -33,4 +33,4 @@ def pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     return y_pred
 
 if __name__ == '__main__':
-    pred()
+    room_pred()
