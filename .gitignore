@@ -32,4 +32,5 @@ data/
 .python-version
 
 # Notebook
-# pipeline_mvp.ipynb
+notebooks/perso/*
+notebooks/pipeline_mvp.ipynb
