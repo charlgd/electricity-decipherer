@@ -25,12 +25,15 @@ mlruns
 # IDE #
 *.vscode
 
-data/
+/data
 
 .env
 .envrc
 .python-version
 
-# Notebook
+# Notebooks
 notebooks/perso/*
 notebooks/pipeline_mvp.ipynb
+
+
+/training_outputs
