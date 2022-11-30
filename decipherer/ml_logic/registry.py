@@ -38,6 +38,7 @@ def save_pipeline(pipeline: Pipeline = None,
     # save pipeline
     if pipeline is not None:
         pipeline_path = os.path.join(local_registry_path, "models", pipeline_type + "-" + timestamp + ".joblib")
+        print(pipeline_path)
         dump(pipeline, pipeline_path)
 
     print("\n✅ data saved locally")

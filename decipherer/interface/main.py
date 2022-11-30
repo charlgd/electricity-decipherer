@@ -6,7 +6,7 @@ def room_pred(X_pred: pd.DataFrame = None) -> np.ndarray:
     Make a prediction using the latest trained model
     """
 
-    print("\n⭐️ Use case: predict")
+    print("\n⭐️ Use case: predict rooms")
 
     from decipherer.ml_logic.registry import load_pipeline
 
@@ -32,9 +32,36 @@ def room_pred(X_pred: pd.DataFrame = None) -> np.ndarray:
 
     return y_pred
 
+def appliance_pred(X_pred: pd.DataFrame = None,
+                   selected_appliances=['dishwasher', 'microwave', 'oven']) -> np.ndarray:
+    """
+    Make a prediction using the latest trained model
+    """
+
+    print("\n⭐️ Use case: predict appliances")
+
+    from decipherer.ml_logic.registry import load_pipeline
+
+    if X_pred is None:
+
+        X_pred = pd.DataFrame(dict(
+            date_time=["2008-02-17 09:49:00"],
+            kitchen=17
+        ))
+
+    pipeline = load_pipeline(pipeline_type='appliance')
+    y_pred = pd.DataFrame(pipeline.predict(X_pred))
+
+    y_pred.columns = selected_appliances
+    y_pred['date_time'] = X_pred['date_time']
+
+    print("\n✅ prediction done: ", y_pred.head(), y_pred.shape)
+
+    return y_pred
+
 if __name__ == '__main__':
 
-    # Test data
+    # Test data (for room prediction)
     # X_pred = pd.DataFrame({
     #     'date': ['1/1/2010', '2/1/2010', '30/1/2010'],
     #     'time': ['00:15:00', '10:20:00', '13:50:00'],
@@ -45,4 +72,6 @@ if __name__ == '__main__':
     #     'global_consumption': [10, 10, 10]
     # })
 
-    room_pred()
+    # room_pred()
+
+    appliance_pred()
