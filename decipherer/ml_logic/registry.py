@@ -66,3 +66,25 @@ def load_pipeline(pipeline_type='room', local_registry_path=LOCAL_REGISTRY_PATH)
     print("\n✅ pipeline loaded from disk")
 
     return pipeline
+
+
+def get_pipeline_type(selected_appliances):
+    '''
+    pipeline_type to choose according to selected_appliances
+    * kitchen_1: ['dishwasher', 'microwave', 'oven']
+    * laundry_1: ['washing_machine', 'tumble_drier', 'refrigerator', 'light']
+    * heating_1: ['water_heater', 'ac']
+    '''
+    selected_appliances.sort()
+
+    if selected_appliances == ['dishwasher', 'microwave', 'oven']:
+        return 'kitchen_1'
+
+    if selected_appliances == ['light', 'refrigerator','tumble_drier', 'washing_machine']:
+        return 'laundry_1'
+
+    if selected_appliances == ['ac', 'water_heater']:
+        return 'heating_1'
+
+    print('Appliance selection not recognized')
+    return None
