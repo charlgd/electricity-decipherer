@@ -40,7 +40,7 @@ def appliance_pred(X_pred: pd.DataFrame = None,
 
     print("\n⭐️ Use case: predict appliances")
 
-    from decipherer.ml_logic.registry import load_pipeline, get_pipeline_type
+    from decipherer.ml_logic.registry import load_pipeline
 
     if X_pred is None:
 
@@ -49,10 +49,10 @@ def appliance_pred(X_pred: pd.DataFrame = None,
             kitchen=20
         ))
 
-    pipeline = load_pipeline(pipeline_type=get_pipeline_type(selected_appliances))
-    y_pred = pd.DataFrame(pipeline.predict(X_pred))
+    pipeline = load_pipeline(pipeline_type='appliances')
+    y_pred = pd.DataFrame(pipeline.predict(X_pred, selected_appliances=selected_appliances))
 
-    print("\n✅ prediction done: ", y_pred.head(), y_pred.shape)
+    print("\n✅ prediction done: ", '\n', y_pred.head(),'\n', y_pred.shape)
 
     return y_pred
 
@@ -71,6 +71,5 @@ if __name__ == '__main__':
 
     # room_pred()
 
-    #selected_appliances=['washing_machine', 'tumble_drier', 'refrigerator', 'light']
-    selected_appliances=['water_heater', 'ac']
+    selected_appliances=['water_heater', 'ac', 'internet_router', 'computer']
     appliance_pred(selected_appliances=selected_appliances)
