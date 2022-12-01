@@ -7,61 +7,141 @@ import plotly.express as px
 import json
 import streamlit as st
 
-url =  'https://decipherer.loca.lt/'
-rooms = ['Kitchen', 'Bedroom', 'Laundry room', 'Bathroom']
-n_rows = 50
+
+st.set_page_config(
+    page_title="HomeAIVolt", page_icon="⚡", initial_sidebar_state="expanded"
+)
 
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Temperature", "70 °F", "1.2 °F")
-col2.metric("Wind", "9 mph", "-8%")
-col3.metric("Humidity", "86%", "4%")
+def input_interface():
+    '''the function generates a checkbox so that the user can select their room type
+      and if he has a Bedroom, then it creates a slider - to select the number of bedrooms
+      return list of room type and the number of bedrooms
+    '''
+    user_data = ['Kitchen', 'Bedroom', 'Laundry room', 'Bathroom','Heating room']
+    user_data_default = ['Kitchen','Laundry room','Heating room']
+    user_selected_data =[]
 
-#st.write(df)
-min_dt= '777'
-max_dt = '22'
-el_consupt = '333'
+    for i in range(len(user_data)):
+        if user_data[i] in user_data_default:
+            ch = st.checkbox(label = user_data[i], value =True)
+        else:
+            ch = st.checkbox(user_data[i])
+        user_selected_data.append(ch)
+        if i == 1:
+            bedroom_count = st.slider('Select a number of bedrooms', 1, 10, 0)
 
-st.subheader("Electricity breakdown by rooms ")
-st.markdown('#### The global electricity consumption of your home between' \
-              + min_dt + 'and' + max_dt + ' was' + el_consupt +
-            'Here is how it is distributed among the different rooms in your home:')
+    #create list of selected rooms:
+    rooms = [user_data[np.where(user_selected_data)[0][i]] \
+        for i in range(len(np.where(user_selected_data)[0]))]
 
-df = pd.DataFrame(
-        np.random.randint(100, size=(n_rows, len(rooms))),
-        columns = rooms)
-df = df.loc[:, df.columns != 'Bathroom']
-col_values = [val for val in df.sum()]
-col_names = [col for col in df.columns]
-data_agr_api = {'type': col_names,'consumption_%': col_values}
-data_agr_api_df = pd.DataFrame(data = data_agr_api)
-#print(df)
-#print(data_agr_api_df)
-
-#json_list = json.loads(json.dumps(list(ipnut_df.T.to_dict().values())))
-
-#res = requests.post(url, data = json.dumps(json_list))
-#print(res)
-
-#def input_interface_appliances():
-    #the interface for appliences
+    return rooms, bedroom_count
 
 
+#########Interface for Appliances:
+def input_interface_appliances():
+    '''the interface for appliences,
+    return a list with selected appliences and selected room type
+    1) kitchen -  dishwasher, an oven and a microwave (hot plates are not electric but gas powered).
+    2) laundry_room - a washing-machine, a tumble-drier, a refrigerator and a light.
+    3) heating_room - electric water-heater and an air-conditioner.
+    '''
+    user_data_appl = {
+                   'kitchen':['Blender','Dishwasher','Oven','Toaster','Coffee machine','Microwave','Kettle'],
+                   'laundry':['Washing-machine','Dryer','Refrigerator','Light system'],
+                   'heating room':['Water-heater','Air-conditioner']
+                  }
 
-#df['DOB1'] = df['DOB'].dt.strftime('%m/%d/%Y')
-#+ ' ' + x['time'])
-#print(len(value))
+    appl_by_default_kitchen = ['Dishwasher','Oven','Microwave']
+    appl_by_default_laundry = ['Washing-machine','Dryer','Refrigerator','Light system']
+    appl_by_default_heating = ['Water-heater','Air-conditioner']
 
-#user_selected_data =[]
-#print(type(user_data_appl))
-#print(user_data_appl.items())
-#print(user_data_appl.values())
-#
+    #ask user to select room. By default - kitchen:
+    room_type_list = list(user_data_appl.keys()) #+ ['All']
+    option = st.selectbox(
+        'Select the rooom - to see appliances in it',
+        (room_type_list),
+        index = 1,
+        key = 'visibility'
+        )
+    st.write('You selected:', option)
+    appl_by_default = []
+    room_type = option
+    #for kitchen
+    if room_type == room_type_list[0]:
+        appl_by_default = appl_by_default_kitchen
+    #for laundry
+    if room_type == room_type_list[1]:
+        appl_by_default = appl_by_default_laundry
+    #for heating room
+    if room_type == room_type_list[2]:
+        appl_by_default = appl_by_default_heating
+
+    user_selected_data =[]
+    user_data_appl_list= []
+    col1, col2  = st.columns((0.5,1))
+    user_data_appl[option]
+    with col1:
+        for i, (key, value) in enumerate(user_data_appl.items()):
+            #display data corresponding to user choice
+            if key == option:
+             st.markdown("## " + str(key))
+             for i in range(len(value)):
+                 #######
+                if value[i] in appl_by_default:
+                    ch = st.checkbox(value[i], key = str(value[i]), value  = True)
+                else:
+                    ch = st.checkbox(value[i])
+                user_selected_data.append(ch)
+                 ######
+                 #ch = st.checkbox(value[i], key = str(value[i]))
+                 #if value[i] in appl_by_default:
+                    #st.checkbox(label = value[i], value =True)
+
+                user_data_appl_list.append(value[i])
+                #user_selected_data.append(ch)
+
+    #create list of selected appliences:
+    appl = [user_data_appl_list[np.where(user_selected_data)[0][i]] \
+        for i in range(len(np.where(user_selected_data)[0]))]
+
+    #add default data:
+    appl = appl + appl_by_default
+
+    return appl,room_type
+
+def graph_bar(df, col_dt_name):
+    '''Input Dataframe, col_dt_name - name of column with datetime
+    the function returns a bar chart
+    '''
+    chart_data = pd.DataFrame(df,columns = df.columns)
+    return st.bar_chart(chart_data, x = col_dt_name)
 
 
-#for key, value in user_data_appl.iteritems():
-    #print(key)
-##print(len(user_data_appl))
-##for i in range(len(user_data_appl)):
-   # ch = st.checkbox(user_data_appl[i])
-   # user_selected_data.append(ch)
+def RoomData():
+    df = pd.DataFrame({
+                    'laundry': [18, 20, 15, 14, 10, 9],
+                    'kitchen': [18, 20, 15, 14, 10, 9],
+                    'time': ['2022-01-01 01:14:00', '2022-01-01 01:24:15',
+                            '2022-01-01 02:52:19', '2022-01-01 02:52:00',
+                            '2022-01-01 04:05:10', '2022-01-01 05:35:09']
+        })#
+    # Countries code goes here
+    st.write("Page 1 - Countries")
+    input_interface()
+    return df
+
+def ApplData():
+    # Continents code goes here
+    st.write("Page 2 !!!!!!")
+    appl,room_type = input_interface_appliances()
+    #st.write(appl)
+
+###########################
+st.header("⚡ HomeAIVolt")
+df = RoomData()
+
+btn_next = st.button("Go to the next page✨")
+if st.session_state or btn_next:
+    ApplData()
+    graph_bar(df,'time')
