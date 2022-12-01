@@ -106,17 +106,21 @@ def data_similation_appl(df_global_cons, appl_list):
 def from_csv_for_api_appl(df_csv, room_type):
     '''modify df for api format:
     '''
-    if room_type in df_csv.columns:
+    if room_type in df_csv.columns or room_type == 'All':
         n = df_csv.shape[0]
-        date_time = [df_csv['date_time'].iloc[i] for i in range(n)]
-        consumption = [df_csv[room_type].iloc[i] for i in range(n)]
+        column_datetime = 'date_time'
+        date_time = [df_csv[column_datetime].iloc[i] for i in range(n)]
+        if room_type == 'All':
+            #take the total sum in all columns except column with date info:
+            consumption = [round(df_csv.loc[:, df_csv.columns != column_datetime].iloc[i].sum(),2) for i in range(n)]
+        else:
+            #take the data only in one coliumn = room_type:
+            consumption = [df_csv[room_type].iloc[i] for i in range(n)]
         data_output = {
             'date_time': date_time,
             'consumption':consumption
             }
         df_output = pd.DataFrame(data_output)
-        #df_output = df_csv[['date_time',room_type]].copy()
-        #df_output.rename(columns={room_type: 'consumption'}, inplace=True)
     else:
         df_output = pd.DataFrame({'date_time': [''], 'room_type': [room_type]})
     return df_output
@@ -130,11 +134,10 @@ def input_interface_appliances():
     3) heating_room - electric water-heater and an air-conditioner.
     '''
     user_data_appl = {
-                   'kitchen':['dishwasher','microwave','oven', 'refrigerator','coffee','freezer'],
-                   'laundry room':['washing_machine','tumble_drier','light'],
-                   'heating room':['water_heater','ac','boiler'],
-                   'bedroom': ['air_purifier','computer','internet_router','phone_charger','screen','tv'],
-                   'bathroom':['fan','radiator','sound_system','vacuum']
+                   'kitchen':['dishwasher','microwave','oven','coffee','freezer'\
+                       ,'phone_charger','laptop','tv'],
+                   'laundry room':['washing_machine','tumble_drier','light','sound_system','internet_router', 'refrigerator'],
+                   'heating room':['water_heater','ac','boiler','radiator','fan']
                   }
     #Data by default selected:
     #appl_by_default_kitchen = ['Dishwasher','Oven','Microwave']
@@ -143,28 +146,18 @@ def input_interface_appliances():
 
     #ask user to select room:
     room_type_list = list(user_data_appl.keys()) + ['All']
+    st.markdown('#### Select the rooom - to see appliances in it:')
     option = st.selectbox(
-        'Select the rooom - to see appliances in it',
+        '',
         (room_type_list),
         index = 1
         )
     st.write('You selected:', option)
-    #appl_by_default = []
     room_type = option
-    #for kitchen
-    #if room_type == room_type_list[0]:
-        #appl_by_default = appl_by_default_kitchen
-    #for laundry
-    #if room_type == room_type_list[1]:
-        #appl_by_default = appl_by_default_laundry
-    #for heating room
-    #if room_type == room_type_list[2]:
-        #appl_by_default = appl_by_default_heating
 
     user_selected_data =[]
     user_data_appl_list= []
     col1, col2  = st.columns((0.5,1))
-    #user_data_appl = user_data_appl[option]
     with col1:
         #display data corresponding to user choice
         for i, (key, value) in enumerate(user_data_appl.items()):
@@ -275,107 +268,110 @@ def RoomData():
     min_dt = ''
     max_dt = ''
     resp_code = 100
+    df_from_api = pd.DataFrame()
+    input_df = pd.DataFrame()
+    df_output = pd.DataFrame()
 
     if uploaded_file is not None:
         file_name = uploaded_file.name
-        ipnut_df = pd.read_csv(uploaded_file)
-        if check_csv_headers(ipnut_df):
+        input_df = pd.read_csv(uploaded_file)
+        if len(input_df) > 1:
+            if check_csv_headers(input_df):
+                try:
+                    df_1col = input_df.iloc[:, 0]
+
+                    if input_df.columns[0] in ['Date','date','time', 'date_time', 'datetime']:
+                            min_dt = str(df_1col.iloc[0])
+                            max_dt = str(df_1col.iloc[-1])
+
+                    st.success('The file was successfully uploaded!\
+                            It contains the consumption profile of \
+                            your home from ' + min_dt +' to '+ max_dt + '.', icon="✅")
+                    #ask user for type of rooms and number of bedrooms:
+                    rooms, bedroom_count = input_interface()
+                    btn_check = 0
+                    analyze_btn = st.button("Analyse my consumption ✨")
+                    if analyze_btn:
+                        st.session_state = 1
+                        room_api_list = ['kitchen','laundry_room','bathroom','heating_room','bedroom']
+                        url_rooms= '?'
+                        for i in range(len(room_api_list)):
+                            room_api = room_api_list[i]
+                            room_url_part = str(room_api) + '=' + \
+                                str(not not[bool(r) for r in rooms if r.replace(' ','_').lower() == room_api])
+                            if room_api == 'bedroom':
+                                room_url_part = str(room_api) +'=' + str(bedroom_count)
+                            url_rooms = url_rooms + room_url_part + '&'
+                        url_rooms = API_URL + url_rooms[:-1]
+
+                        #st.write(url_rooms)
+
+                        api_response = df_to_api(input_df, url_rooms)
+                        resp_code = api_response.status_code
+
+                        #st.write(resp_code)
+
+                except requests.exceptions.RequestException as err:
+                    st.write ("OOps: Something Else",err)
+                except requests.exceptions.HTTPError as errh:
+                    st.write ("Http Error:",errh)
+                except requests.exceptions.ConnectionError as errc:
+                    st.write ("Error Connecting:",errc)
+                except requests.exceptions.Timeout as errt:
+                    st.write ("Timeout Error:",errt)
+            else:
+                st.warning("## File has a wrong Headers!")
+
+        if st.session_state:
+            #load data from api:
             try:
-                #ask user for type of rooms and number of bedrooms:
-                rooms, bedroom_count = input_interface()
-                analyze_btn = st.button("Analyse my consumption ✨")
-                if analyze_btn:
-                    st.session_state = 1
+                if resp_code == 200:
+                    #get data from api:
+                    df_from_api = api_to_df(api_response)
+                if resp_code != 200:
+                    #Simulate data:
+                    df_from_api = data_similation_rooms(input_df)
+                #column name with datetime
+                col_dt_name = 'date_time'
 
-                    #st.write(str(st.session_state) + ' checking the state')
+                df_from_api[col_dt_name] = pd.to_datetime(df_from_api[col_dt_name])
+                df_output = df_from_api.copy()
 
-                    room_api_list = ['kitchen','laundry_room','bathroom','heating_room','bedroom']
-                    url_rooms= '?'
-                    for i in range(len(room_api_list)):
-                        room_api = room_api_list[i]
-                        room_url_part = str(room_api) + '=' + \
-                            str(not not[bool(r) for r in rooms if r.replace(' ','_').lower() == room_api])
-                        if room_api == 'bedroom':
-                            room_url_part = str(room_api) +'=' + str(bedroom_count)
-                        url_rooms = url_rooms + room_url_part + '&'
-                    url_rooms = API_URL + url_rooms[:-1]
 
-                    st.write(url_rooms)
+                grouped_hours = df_from_api.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='H')).sum().reset_index()
+                grouped_days = df_from_api.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='D')).sum().reset_index()
 
-                    api_response = df_to_api(ipnut_df, url_rooms)
-                    resp_code = api_response.status_code
+                grouped_Ch = grouped_hours.copy()
+                grouped_Ch = grouped_Ch.groupby(grouped_Ch[col_dt_name].dt.hour).mean().reset_index()
 
-                    st.write(resp_code)
+                ###Visual:
+                #convert Wt to Kwt:
+                df_from_api.loc[:, df_from_api.columns != col_dt_name]\
+                    = df_from_api.loc[:, df_from_api.columns != col_dt_name]/1000
 
-                    df_1col = ipnut_df.iloc[:, 0]
+                #total electricity consuption:
+                el_consupt = round(sum(df_from_api.iloc[:,:-1].sum()),0)
 
-                    if ipnut_df.columns[0] in ['Date','date','time', 'date_time', 'datetime']:
-                        min_dt = str(df_1col.iloc[0])
-                        max_dt = str(df_1col.iloc[-1])
+                st.subheader("Electricity Cost (CAD) breakdown by rooms ")
+                st.markdown('#### The global electricity consumption of your home between ' \
+                    + min_dt + ' and ' + max_dt + ' was ' + str(el_consupt) +
+                    ' kWh. ')
+                st.markdown('#### Here is how it is distributed among the different rooms in your home:')
+                graph_pie(df_from_api,col_dt_name)
 
-            except requests.exceptions.RequestException as err:
-                st.write ("OOps: Something Else",err)
-            except requests.exceptions.HTTPError as errh:
-                st.write ("Http Error:",errh)
-            except requests.exceptions.ConnectionError as errc:
-                st.write ("Error Connecting:",errc)
-            except requests.exceptions.Timeout as errt:
-                st.write ("Timeout Error:",errt)
-        else:
-            st.warning("## File has a wrong Headers!")
+                st.subheader("Evolution of your electricity consumption (kWh) during the given period:")
+                #graph_bar(df_from_api,col_dt_name)
 
-    df_from_api = pd.DataFrame()
-    if st.session_state:
-        #load data from api:
-        try:
-            if resp_code == 200:
-                st.success('The file was successfully uploaded!\
-                        It contains the consumption profile of \
-                        your home from ' + min_dt +' to '+ max_dt + '.', icon="✅")
-                #get data from api:
-                df_from_api = api_to_df(api_response)
-                #st.write(df_from_api)
-            if resp_code != 200:
-                #Simulate data:
-                st.write("Simulated data:")
-                df_from_api = data_similation_rooms(ipnut_df)
-                st.write(df_from_api)
+                st.subheader("Electricity consumption by days")
+                graph_bar(grouped_days,col_dt_name)
 
-            #column name with datetime
-            col_dt_name = 'date_time'
-            df_from_api[col_dt_name] = pd.to_datetime(df_from_api[col_dt_name])
+                st.subheader("Electricity consumption by hours - Typical Day")
+                graph_bar(grouped_Ch,col_dt_name)
 
-            grouped_hours = df_from_api.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='H')).sum().reset_index()
-            grouped_days = df_from_api.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='D')).sum().reset_index()
+            except requests.exceptions.RequestException as e:
+                raise SystemExit(e)
 
-            ###Visual:
-            #convert Wt to Kwt:
-            df_from_api.loc[:, df_from_api.columns != col_dt_name]\
-                = df_from_api.loc[:, df_from_api.columns != col_dt_name]/1000
-
-            #total electricity consuption:
-            el_consupt = round(sum(df_from_api.iloc[:,:-1].sum()),0)
-
-            st.subheader("Electricity Cost (CAD) breakdown by rooms ")
-            st.markdown('#### The global electricity consumption of your home between ' \
-                + min_dt + ' and ' + max_dt + ' was ' + str(el_consupt) +
-                ' kWh. ')
-            st.markdown('#### Here is how it is distributed among the different rooms in your home:')
-            graph_pie(df_from_api,col_dt_name)
-
-            st.subheader("Evolution of your electricity consumption (kWh) during the given period:")
-            graph_bar(df_from_api,col_dt_name)
-
-            st.subheader("Electricity consumption by hours")
-            graph_bar(grouped_hours,col_dt_name)
-
-            st.subheader("Electricity consumption by days")
-            graph_bar(grouped_days,col_dt_name)
-
-        except requests.exceptions.RequestException as e:
-            raise SystemExit(e)
-
-    return df_from_api
+    return df_output
 
 
 
@@ -383,60 +379,67 @@ def AppliancesData(df):
     '''
     Page for Appliances
     df = dataframe from the first page
-    ipnut_df = data from uploaded csv file
+    input_df = data from uploaded csv file
     '''
     #####Appliances:
     #1. user interface:
     appliances_list, room_type = input_interface_appliances()
 
-
     #1. send json (datetime, global_consuption, room_type)
-    analyze_btn_2 = st.button("Analyse my appliances ✨", key = 'btn_appl')
+    if len(appliances_list) > 0:
+        analyze_btn_2 = st.button("Analyse my appliances ✨", key = 'btn_appl')
 
-    appliances_list = list(dict.fromkeys(appliances_list))
-    appliances_string = ','.join(str(i) for i in appliances_list) #.split(":", 1)
-    room_type = room_type.replace(' ','_')
-    url_appl = API_URL + '/appliances?type=' + room_type + '&appliance_list='\
-       + appliances_string
-    st.write('data to api:')
-    st.write(url_appl)
+        appliances_list = list(dict.fromkeys(appliances_list))
+        appliances_string = ','.join(str(i) for i in appliances_list) #.split(":", 1)
+        room_type = room_type.replace(' ','_')
+        url_appl = API_URL + '/appliances?type=' + room_type + '&appliance_list='\
+        + appliances_string
+        #st.write('data to api:')
+        #st.write(url_appl)
 
-    if analyze_btn_2:
+        if analyze_btn_2:
 
-        df_api_cons = from_csv_for_api_appl(df, room_type)
-        df_api_cons['date_time'] = df_api_cons['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        st.write(json.loads(json.dumps(list(df_api_cons.T.to_dict().values()))))
-
-        r = df_to_api(df_api_cons,url_appl)
-        json_test = r.json()
-        st.write("data from api - appl:")
-        st.write(r.status_code)
-        st.write(json_test)
-        st.markdown('#### Here is how it is distributed among the different appliances that you selected:')
-
-
-        #if api status code != 200 then create random data:
-        if r.status_code == 200:
             df_api_cons = from_csv_for_api_appl(df, room_type)
-            df_appl_detail = data_similation_appl(df_api_cons,appliances_list)
-            st.write(df_appl_detail)
-            #########
-            #column name with datetime
-            col_dt_name = 'date_time'
-            #df_appl_deteail[col_dt_name] = pd.to_datetime(df_appl_deteail[col_dt_name])
+            if len(df_api_cons) > 1:
+                col_dt_name = 'date_time'
+                df_api_cons[col_dt_name] = df_api_cons[col_dt_name].dt.strftime('%Y-%m-%d %H:%M:%S')
 
-            grouped_hours = df_appl_detail.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='H')).sum().reset_index()
-            grouped_days = df_appl_detail.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='D')).sum().reset_index()
-            ###Visual:
-            #convert Wt to Kwt:
-            df_appl_detail.loc[:, df_appl_detail.columns != col_dt_name]\
-                = df_appl_detail.loc[:, df_appl_detail.columns != col_dt_name]
-                #/1000
+                resp_ap = df_to_api(df_api_cons,url_appl)
+                #st.write("data to api:")
+                #st.write(df_api_cons)
 
-            #total electricity consuption:
-            st.subheader("Electricity Cost (CAD) breakdown by rooms ")
-            st.markdown('#### Here is how it is distributed among the different appliances in your '+ room_type + ':')
-            graph_pie(df_appl_detail, col_dt_name)
+                df_appl_det = api_to_df(resp_ap)
+                df_appl_det[col_dt_name] = pd.to_datetime(df_appl_det[col_dt_name])
+                #st.write("data from api - appl:")
+                #st.write(df_appl_det)
+
+                #st.markdown('#### Here is how it is distributed among the different appliances that you selected:')
+
+                if resp_ap.status_code != 200:
+                    #df_api_cons = from_csv_for_api_appl(df, room_type)
+                    df_appl_det = data_similation_appl(df,appliances_list)
+                    st.write("Simulated data:")
+                    #st.write(df_appl_det)
+                    #########
+
+                #df_appl_deteail[col_dt_name] = pd.to_datetime(df_appl_deteail[col_dt_name])
+                if col_dt_name in df_appl_det.columns:
+                    grouped_hours = df_appl_det.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='H')).sum().reset_index()
+                    grouped_days = df_appl_det.groupby(pd.Grouper(key=col_dt_name, axis=0, freq='D')).sum().reset_index()
+                ###Visual:
+                #convert Wt to Kwt:
+                    df_appl_det.loc[:, df_appl_det.columns != col_dt_name]\
+                    = df_appl_det.loc[:, df_appl_det.columns != col_dt_name]
+                            #/1000
+
+                    #total electricity consuption:
+                    #st.subheader("Electricity Cost (CAD) breakdown by rooms ")
+                    st.markdown('#### Here is how it is distributed among the different appliances in your '+ room_type + ':')
+                    graph_pie(df_appl_det, col_dt_name)
+            else:
+                st.write("No data in this room")
+    else:
+        st.markdown('#### Please select the appliances before')
 
 
 
@@ -459,25 +462,9 @@ st.markdown('''### HomeAIVolt uses powerful machine learning tools to analyse\
 df_from_api = pd.DataFrame()
 df_from_api = RoomData()
 
-if len(df_from_api) > 0:
-    #btn_next = st.button("Go to the next page✨")
-    #if st.session_state or btn_next:
+if len(df_from_api) > 1:
     AppliancesData(df_from_api)
     #graph_bar(data, col_dt_name = data.columns[-1])
 
-#if len(df) > 0:
-    #next = st.button("Go to the next page✨")
-    #st.session_state.page_select = st.radio('Pages', ['Page 1', 'Page 2'])
-    #st.write(str(next))
-    #st.session_state = 1
-#Got to the next page:
-#page = st.sidebar.selectbox('Select page',['Rooms','Appliances'])
-#if page == 'Appliances':
-    #AppliancesData(data)
-
-#if st.session_state.page_select:
-    #AppliancesData(df)
-#page = st.sidebar.selectbox('Select page',['Country data','Continent data'])
-#st.write('you choice:' + str(page))
 
 #################
