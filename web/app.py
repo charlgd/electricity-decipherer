@@ -26,7 +26,7 @@ def input_interface():
             ch = st.checkbox(user_data[i])
         user_selected_data.append(ch)
         if i == 1:
-            bedroom_count = st.slider('Select a number of bedrooms', 1, 10, 0)
+            bedroom_count = st.slider('Set the number of bedrooms', 1, 10, 0)
 
     #create list of selected rooms:
     rooms = [user_data[np.where(user_selected_data)[0][i]] \
@@ -163,7 +163,7 @@ def input_interface_appliances():
         for i, (key, value) in enumerate(user_data_appl.items()):
             #1.If user select ALL rooms:
             if option == 'All':
-                st.markdown("## " + str(key))
+                st.markdown("## " + str(key.capitalize()))
                 #create a list with all possible appliances -user_data_appl_list:
                 appl_keys = [user_data_appl[i] for i in user_data_appl.keys()]
                 for i in range(len(appl_keys)):
@@ -171,19 +171,19 @@ def input_interface_appliances():
                         user_data_appl_list.append(appl_keys[i][j])
                 #create a list with selected appliances:
                 for i in range(len(value)):
-                    user_selected_data.append(st.checkbox(value[i]))
+                    user_selected_data.append(st.checkbox(value[i].replace('_',' ')))
                     #user_data_appl_list.append(value[i])
 
             #2.if user select one room:
             if key == option:
-             st.markdown("## " + str(key))
+             st.markdown("## " + str(key.capitalize()))
              #create a list with all possible appliances -user_data_appl_list:
              user_data_appl_list = user_data_appl[option]
              #create a list with selected appliances:
              for i in range(len(value)):
                 #if value[i] in appl_by_default:
                     #ch = st.checkbox(value[i], key = str(value[i]), value  = True)
-                ch = st.checkbox(value[i])
+                ch = st.checkbox(value[i].replace('_',' '))
                 user_selected_data.append(ch)
 
     appl = [user_data_appl_list[np.where(user_selected_data)[0][i]] \
@@ -223,16 +223,19 @@ def graph_pie(df, column_datetime):
 
     data_agr_api = {'room': col_names,'watt-hour': col_values}
     data_agr_api_df = pd.DataFrame(data = data_agr_api)
-    pie_chart = px.pie(data_agr_api_df,
-                   values = "watt-hour",
-                   names = "room")
+
 
     #display number of data  = number of columns in received dataset
     room_num = len(col_values)
-    columns_num = ['col' + str(i) for i in range(len(col_values))]
+    columns_num = ['col' + str(i) for i in range(room_num)]
     columns_num = st.columns(room_num)
-    for i in range(len(col_values)):
-        columns_num[i].metric(col_names[i].replace('_',' '), round(col_values[i],2), "CAD")
+    for i in range(room_num):
+        columns_num[i].metric(col_names[i].replace('_room',' '), round(col_values[i],2), "CAD")
+
+    pie_chart = px.pie(data_agr_api_df,
+                   values = "watt-hour",
+                   names = "room"
+                   )
 
     return st.plotly_chart(pie_chart, use_container_width=True)
 
@@ -257,12 +260,15 @@ def RoomData():
     '''
     Page for rooms
     '''
-    st.markdown('''#### Start by uploading the consumption\
-            data of your apartment or house as a .csv file. \
-            It is provided by your power utility company.
-            ''')
-    st.markdown('''''')
     #upload csv file to api:
+    st.markdown(
+    """
+    <style>
+        .css-9ycgxx::after {
+            content: " provided by your utility ⚡";
+        }
+    <style>
+    """, unsafe_allow_html=True)
     uploaded_file = st.file_uploader("", type = "csv")
     analyze_btn = None
     min_dt = ''
@@ -352,14 +358,14 @@ def RoomData():
                 #total electricity consuption:
                 el_consupt = round(sum(df_from_api.iloc[:,:-1].sum()),0)
 
-                st.subheader("Electricity Cost (CAD) breakdown by rooms ")
+                st.subheader("Electricity Cost (CAD) distribution by rooms")
                 st.markdown('#### The global electricity consumption of your home between ' \
                     + min_dt + ' and ' + max_dt + ' was ' + str(el_consupt) +
                     ' kWh. ')
-                st.markdown('#### Here is how it is distributed among the different rooms in your home:')
+               # st.markdown('#### Here is how it is distributed among the different rooms in your home:')
                 graph_pie(df_from_api,col_dt_name)
 
-                st.subheader("Evolution of your electricity consumption (kWh) during the given period:")
+                #st.subheader("Evolution of your electricity consumption (kWh) during the given period:")
                 #graph_bar(df_from_api,col_dt_name)
 
                 st.subheader("Electricity consumption by days")
@@ -398,8 +404,11 @@ def AppliancesData(df):
         #st.write(url_appl)
 
         if analyze_btn_2:
-
+            #st.write("Data to API from the first api")
+            #st.write(df)
             df_api_cons = from_csv_for_api_appl(df, room_type)
+            #st.write(df_api_cons)
+
             if len(df_api_cons) > 1:
                 col_dt_name = 'date_time'
                 df_api_cons[col_dt_name] = df_api_cons[col_dt_name].dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -414,7 +423,8 @@ def AppliancesData(df):
                 #st.write(df_appl_det)
 
                 #st.markdown('#### Here is how it is distributed among the different appliances that you selected:')
-
+                #st.write(resp_ap.status_code)
+                #st.write(df_appl_det)
                 if resp_ap.status_code != 200:
                     #df_api_cons = from_csv_for_api_appl(df, room_type)
                     df_appl_det = data_similation_appl(df,appliances_list)
@@ -453,11 +463,15 @@ st.set_page_config(
 )
 
 st.markdown('''# ⚡ HomeAIVolt''')
-st.markdown('''### HomeAIVolt uses powerful machine learning tools to analyse\
-            the user’s electrical consumption data provided\
-            by the utility company to suggest tailored recommendations\
-            to the customer on reducing energy consumption and increasing their savings!\
+st.markdown('''## Get smart about your energy usage.
             ''')
+st.markdown('''## Unlock the power of data to reduce energy costs.
+            ''')
+st.markdown('''## Take control of your energy bills with HomeAIVolt.
+            ''')
+
+
+
 
 df_from_api = pd.DataFrame()
 df_from_api = RoomData()
