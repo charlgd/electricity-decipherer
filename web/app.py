@@ -15,8 +15,8 @@ def input_interface():
       and if he has a Bedroom, then it creates a slider - to select the number of bedrooms
       return list of room type and the number of bedrooms
     '''
-    user_data = ['Kitchen', 'Bedroom', 'Laundry room', 'Bathroom','Heating room']
-    user_data_default = ['Kitchen','Laundry room','Heating room']
+    user_data = ['Bathroom', 'Bedroom', 'Heating room', 'Kitchen', 'Laundry room']
+    user_data_default = []
     user_selected_data =[]
 
     for i in range(len(user_data)):
@@ -26,7 +26,7 @@ def input_interface():
             ch = st.checkbox(user_data[i])
         user_selected_data.append(ch)
         if i == 1:
-            bedroom_count = st.slider('Set the number of bedrooms', 1, 10, 0)
+            bedroom_count = st.slider('Choose the number of bedrooms', 1, 10, 0)
 
     #create list of selected rooms:
     rooms = [user_data[np.where(user_selected_data)[0][i]] \
@@ -106,11 +106,12 @@ def data_similation_appl(df_global_cons, appl_list):
 def from_csv_for_api_appl(df_csv, room_type):
     '''modify df for api format:
     '''
-    if room_type in df_csv.columns or room_type == 'All':
+    room_type = room_type.lower()
+    if room_type in df_csv.columns or room_type == 'all':
         n = df_csv.shape[0]
         column_datetime = 'date_time'
         date_time = [df_csv[column_datetime].iloc[i] for i in range(n)]
-        if room_type == 'All':
+        if room_type == 'all':
             #take the total sum in all columns except column with date info:
             consumption = [round(df_csv.loc[:, df_csv.columns != column_datetime].iloc[i].sum(),2) for i in range(n)]
         else:
@@ -134,25 +135,29 @@ def input_interface_appliances():
     3) heating_room - electric water-heater and an air-conditioner.
     '''
     user_data_appl = {
-                   'kitchen':['dishwasher','microwave','oven','coffee','freezer'\
+                   'Kitchen':['dishwasher','microwave','oven','coffee','freezer'\
                        ,'phone_charger','laptop','tv'],
-                   'laundry room':['washing_machine','tumble_drier','light','sound_system','internet_router', 'refrigerator'],
-                   'heating room':['water_heater','ac','boiler','radiator','fan']
+                   'Laundry room':['washing_machine','tumble_drier','light','sound_system','internet_router', 'refrigerator'],
+                   'Heating room':['water_heater','ac','boiler','radiator','fan']
                   }
     #Data by default selected:
     #appl_by_default_kitchen = ['Dishwasher','Oven','Microwave']
     #appl_by_default_laundry = ['Washing-machine','Dryer','Refrigerator','Light system']
     #appl_by_default_heating = ['Water-heater','Air-conditioner']
 
+    # Title for this section
+    #st.subheader("")
+
     #ask user to select room:
     room_type_list = list(user_data_appl.keys()) + ['All']
-    st.markdown('#### Select the rooom - to see appliances in it:')
+    room_type_list.sort()
+    st.subheader('Select the room to analyze your energy consumption by appliance.')
     option = st.selectbox(
         '',
         (room_type_list),
         index = 1
         )
-    st.write('You selected:', option)
+    #st.write('You selected:', option)
     room_type = option
 
     user_selected_data =[]
@@ -163,7 +168,7 @@ def input_interface_appliances():
         for i, (key, value) in enumerate(user_data_appl.items()):
             #1.If user select ALL rooms:
             if option == 'All':
-                st.markdown("## " + str(key.capitalize()))
+                st.markdown("##### " + str(key.capitalize()))
                 #create a list with all possible appliances -user_data_appl_list:
                 appl_keys = [user_data_appl[i] for i in user_data_appl.keys()]
                 for i in range(len(appl_keys)):
@@ -171,19 +176,19 @@ def input_interface_appliances():
                         user_data_appl_list.append(appl_keys[i][j])
                 #create a list with selected appliances:
                 for i in range(len(value)):
-                    user_selected_data.append(st.checkbox(value[i].replace('_',' ')))
+                    user_selected_data.append(st.checkbox(value[i].replace('_',' ').capitalize()))
                     #user_data_appl_list.append(value[i])
 
             #2.if user select one room:
             if key == option:
-             st.markdown("## " + str(key.capitalize()))
+             st.markdown("##### " + str(key.capitalize()))
              #create a list with all possible appliances -user_data_appl_list:
              user_data_appl_list = user_data_appl[option]
              #create a list with selected appliances:
              for i in range(len(value)):
                 #if value[i] in appl_by_default:
                     #ch = st.checkbox(value[i], key = str(value[i]), value  = True)
-                ch = st.checkbox(value[i].replace('_',' '))
+                ch = st.checkbox(value[i].replace('_',' ').capitalize())
                 user_selected_data.append(ch)
 
     appl = [user_data_appl_list[np.where(user_selected_data)[0][i]] \
@@ -219,9 +224,9 @@ def graph_pie(df, column_datetime):
 
     #watt-hour in col_values
     col_values = [val * ELEC_PRICE  for val in df.sum()]
-    col_names = [col.capitalize() for col in df.columns]
+    col_names = [col.capitalize().replace('_', ' ') for col in df.columns]
 
-    data_agr_api = {'room': col_names,'watt-hour': col_values}
+    data_agr_api = {'room': col_names,'CAD': col_values}
     data_agr_api_df = pd.DataFrame(data = data_agr_api)
 
 
@@ -233,7 +238,7 @@ def graph_pie(df, column_datetime):
         columns_num[i].metric(col_names[i].replace('_room',' '), round(col_values[i],2), "CAD")
 
     pie_chart = px.pie(data_agr_api_df,
-                   values = "watt-hour",
+                   values = "CAD",
                    names = "room"
                    )
 
@@ -243,15 +248,16 @@ def graph_bar(df, col_dt_name):
     '''Input Dataframe, col_dt_name - name of column with datetime
     the function returns a bar chart
     '''
-    chart_data = pd.DataFrame(df,columns = df.columns)
-    return st.bar_chart(chart_data, x = col_dt_name)
+    chart_data = df
+    chart_data.columns = [c.capitalize().replace('_', ' ') for c in df.columns]
+    return st.bar_chart(chart_data, x = chart_data.columns[0])
 
 def graph_line(df, col_dt_name):
     '''Input Dataframe, col_dt_name - name of column with datetime
     the function returns a line chart
     '''
     #col_dt_name = df.columns[-1]
-    chart_data = pd.DataFrame(df,columns = df.columns)
+    chart_data = pd.DataFrame(df, columns = df.columns)
     return st.line_chart(chart_data, x = col_dt_name)
 
 #------Pages--------------------#
@@ -351,27 +357,25 @@ def RoomData():
                 grouped_Ch = grouped_Ch.groupby(grouped_Ch[col_dt_name].dt.hour).mean().reset_index()
 
                 ###Visual:
-                #convert Wt to Kwt:
+                #convert W to kW:
                 df_from_api.loc[:, df_from_api.columns != col_dt_name]\
                     = df_from_api.loc[:, df_from_api.columns != col_dt_name]/1000
 
                 #total electricity consuption:
                 el_consupt = round(sum(df_from_api.iloc[:,:-1].sum()),0)
 
-                st.subheader("Electricity Cost (CAD) distribution by rooms")
-                st.markdown('#### The global electricity consumption of your home between ' \
+                st.subheader("Electricity cost distribution by room (CAD)")
+                st.markdown('The global electricity consumption of your home between ' \
                     + min_dt + ' and ' + max_dt + ' was ' + str(el_consupt) +
-                    ' kWh. ')
-               # st.markdown('#### Here is how it is distributed among the different rooms in your home:')
+                    ' kWh. Here is how it is distributed among the different rooms:')
+
                 graph_pie(df_from_api,col_dt_name)
 
-                #st.subheader("Evolution of your electricity consumption (kWh) during the given period:")
+                st.subheader("Evolution of your daily electricity consumption during the given period (kWh)")
                 #graph_bar(df_from_api,col_dt_name)
-
-                st.subheader("Electricity consumption by days")
                 graph_bar(grouped_days,col_dt_name)
 
-                st.subheader("Electricity consumption by hours - Typical Day")
+                st.subheader("Your electricity consumption by hours during a typical Day (kWh)")
                 graph_bar(grouped_Ch,col_dt_name)
 
             except requests.exceptions.RequestException as e:
@@ -398,7 +402,7 @@ def AppliancesData(df):
         appliances_list = list(dict.fromkeys(appliances_list))
         appliances_string = ','.join(str(i) for i in appliances_list) #.split(":", 1)
         room_type = room_type.replace(' ','_')
-        url_appl = API_URL + '/appliances?type=' + room_type + '&appliance_list='\
+        url_appl = API_URL + '/appliances?type=' + room_type.lower() + '&appliance_list='\
         + appliances_string
         #st.write('data to api:')
         #st.write(url_appl)
@@ -443,13 +447,17 @@ def AppliancesData(df):
                             #/1000
 
                     #total electricity consuption:
-                    #st.subheader("Electricity Cost (CAD) breakdown by rooms ")
-                    st.markdown('#### Here is how it is distributed among the different appliances in your '+ room_type + ':')
+                    st.subheader("Electricity cost breakdown by appliance (CAD)")
+                    if room_type == 'All':
+                        room_string = 'all your rooms'
+                    else:
+                        room_string = 'your ' + room_type.lower().replace('_',' ')
+                    st.markdown('Here is how it is distributed among the different appliances in '+ room_string + ':')
                     graph_pie(df_appl_det, col_dt_name)
             else:
                 st.write("No data in this room")
     else:
-        st.markdown('#### Please select the appliances before')
+        st.markdown('##### Please select appliances.')
 
 
 

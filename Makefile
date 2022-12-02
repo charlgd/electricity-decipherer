@@ -5,4 +5,7 @@ reinstall_package:
 	@pip install -e .
 
 run_api:
-	uvicorn decipherer.api.main:app --reload
+	uvicorn web.app:app --reload
+
+run_app:
+	streamlit run web/app.py
