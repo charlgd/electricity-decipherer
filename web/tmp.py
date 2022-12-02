@@ -1,147 +1,222 @@
-
-import pandas as pd
-import numpy as np
-import requests
-import json
-import plotly.express as px
-import json
+from json import JSONDecodeError
 import streamlit as st
+import requests
+from PIL import Image
+import spacy
+#import contextualSpellCheck
+import pickle as pkl
+import SessionState
+import pandas as pd
+import altair as alt
+
+# Function to parse Azure Search results and grab speel checked claim
+
+def spell_check(claim,response):
+
+    for flagged_token in response['flaggedTokens']:
+
+        claim = claim.replace(flagged_token['token'],flagged_token['suggestions'][0]['suggestion'])
+
+    return claim
 
 
-st.set_page_config(
-    page_title="HomeAIVolt", page_icon="⚡", initial_sidebar_state="expanded"
-)
+@st.cache(allow_output_mutation=True)
+def load_model():
+    nlp = spacy.load("en_core_web_md")
+#
+#    nlp.add_pipe("contextual spellchecker")
+#
+    return nlp
+
+# Azure Bing-Search API Key. TODO: Read from config file, env variable or something else secure.
+key = "21c5ba248b464781bba8d4cd5118e303"
+
+# Params for Bing-Search API request
+params = {
+    'mkt':'en-us',
+    'count': 1,
+    'offset': 0,
+    }
+
+headers = {
+    'Ocp-Apim-Subscription-Key': key,
+    }
+
+# Quick CSS hack to hide Streamlit's nav bar
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# Generate App Sidebar
+image = Image.open('logo-factually-health-dark-1006x194.jpg')
+st.sidebar.image(image,
+                 use_column_width=True)
+
+#with st.sidebar.beta_expander("NAVIGATING SEARCH RESULTS"):
+#    st.markdown("- **Select how you want to sort results.** The options are publication year (from most recent to least recent) or our experimental proprietary relevance score.")
+#    st.markdown("- **Click on the article title** to see the original document")
+#    st.markdown("- **Sentences on the bullet points:** These are the excerpts from the article, that our algorithm found to be the most relevant to your query")
+#    st.markdown("- **Maximum of 10 most relevant sentences** returned per article")
+
+st.title("Factually Health: Research-Helper")
+
+#st.markdown("**Database:** PubMed")
+#st.markdown("**Database size:** 5,336 articles on **AoPelvic Floor Dysfunction**")
+#st.markdown("**Search scope:**: publication titles and abstracts")
 
 
-def input_interface():
-    '''the function generates a checkbox so that the user can select their room type
-      and if he has a Bedroom, then it creates a slider - to select the number of bedrooms
-      return list of room type and the number of bedrooms
-    '''
-    user_data = ['Kitchen', 'Bedroom', 'Laundry room', 'Bathroom','Heating room']
-    user_data_default = ['Kitchen','Laundry room','Heating room']
-    user_selected_data =[]
+# Generate Body of the App
 
-    for i in range(len(user_data)):
-        if user_data[i] in user_data_default:
-            ch = st.checkbox(label = user_data[i], value =True)
-        else:
-            ch = st.checkbox(user_data[i])
-        user_selected_data.append(ch)
-        if i == 1:
-            bedroom_count = st.slider('Select a number of bedrooms', 1, 10, 0)
+type_info = "Individual claims"
 
-    #create list of selected rooms:
-    rooms = [user_data[np.where(user_selected_data)[0][i]] \
-        for i in range(len(np.where(user_selected_data)[0]))]
+input_header = "Type your query here:"
 
-    return rooms, bedroom_count
+input_value = "Men cannot have breast cancer" # Placeholder query text. TODO: Read from config file to make this app agnostic to Topic (or disease)
+
+url = "http://localhost:5000/square/"
 
 
-#########Interface for Appliances:
-def input_interface_appliances():
-    '''the interface for appliences,
-    return a list with selected appliences and selected room type
-    1) kitchen -  dishwasher, an oven and a microwave (hot plates are not electric but gas powered).
-    2) laundry_room - a washing-machine, a tumble-drier, a refrigerator and a light.
-    3) heating_room - electric water-heater and an air-conditioner.
-    '''
-    user_data_appl = {
-                   'kitchen':['Blender','Dishwasher','Oven','Toaster','Coffee machine','Microwave','Kettle'],
-                   'laundry':['Washing-machine','Dryer','Refrigerator','Light system'],
-                   'heating room':['Water-heater','Air-conditioner']
-                  }
+claim = st.text_input(input_header, value=input_value)
 
-    appl_by_default_kitchen = ['Dishwasher','Oven','Microwave']
-    appl_by_default_laundry = ['Washing-machine','Dryer','Refrigerator','Light system']
-    appl_by_default_heating = ['Water-heater','Air-conditioner']
+# Initialize empty button. Use SessionState below to keep search results on-screen until user performs another search.
 
-    #ask user to select room. By default - kitchen:
-    room_type_list = list(user_data_appl.keys()) #+ ['All']
-    option = st.selectbox(
-        'Select the rooom - to see appliances in it',
-        (room_type_list),
-        index = 1,
-        key = 'visibility'
-        )
-    st.write('You selected:', option)
-    appl_by_default = []
-    room_type = option
-    #for kitchen
-    if room_type == room_type_list[0]:
-        appl_by_default = appl_by_default_kitchen
-    #for laundry
-    if room_type == room_type_list[1]:
-        appl_by_default = appl_by_default_laundry
-    #for heating room
-    if room_type == room_type_list[2]:
-        appl_by_default = appl_by_default_heating
-
-    user_selected_data =[]
-    user_data_appl_list= []
-    col1, col2  = st.columns((0.5,1))
-    user_data_appl[option]
-    with col1:
-        for i, (key, value) in enumerate(user_data_appl.items()):
-            #display data corresponding to user choice
-            if key == option:
-             st.markdown("## " + str(key))
-             for i in range(len(value)):
-                 #######
-                if value[i] in appl_by_default:
-                    ch = st.checkbox(value[i], key = str(value[i]), value  = True)
-                else:
-                    ch = st.checkbox(value[i])
-                user_selected_data.append(ch)
-                 ######
-                 #ch = st.checkbox(value[i], key = str(value[i]))
-                 #if value[i] in appl_by_default:
-                    #st.checkbox(label = value[i], value =True)
-
-                user_data_appl_list.append(value[i])
-                #user_selected_data.append(ch)
-
-    #create list of selected appliences:
-    appl = [user_data_appl_list[np.where(user_selected_data)[0][i]] \
-        for i in range(len(np.where(user_selected_data)[0]))]
-
-    #add default data:
-    appl = appl + appl_by_default
-
-    return appl,room_type
-
-def graph_bar(df, col_dt_name):
-    '''Input Dataframe, col_dt_name - name of column with datetime
-    the function returns a bar chart
-    '''
-    chart_data = pd.DataFrame(df,columns = df.columns)
-    return st.bar_chart(chart_data, x = col_dt_name)
+search_button = st.empty()
 
 
-def RoomData():
-    df = pd.DataFrame({
-                    'laundry': [18, 20, 15, 14, 10, 9],
-                    'kitchen': [18, 20, 15, 14, 10, 9],
-                    'time': ['2022-01-01 01:14:00', '2022-01-01 01:24:15',
-                            '2022-01-01 02:52:19', '2022-01-01 02:52:00',
-                            '2022-01-01 04:05:10', '2022-01-01 05:35:09']
-        })#
-    # Countries code goes here
-    st.write("Page 1 - Countries")
-    input_interface()
-    return df
+# SessionState is now part of the main Streamlit release. TODO: replace local SessionState.py with package-native SessionState
+ss = SessionState.get(search_button = False)
 
-def ApplData():
-    # Continents code goes here
-    st.write("Page 2 !!!!!!")
-    appl,room_type = input_interface_appliances()
-    #st.write(appl)
+# Clicking "Search" sets the button's session state to true
+if search_button.button("Search"):
 
-###########################
-st.header("⚡ HomeAIVolt")
-df = RoomData()
+    ss.search_button = True
 
-btn_next = st.button("Go to the next page✨")
-if st.session_state or btn_next:
-    ApplData()
-    graph_bar(df,'time')
+# While in the same session state, render the below:
+if ss.search_button:
+
+    with st.spinner("Processing input..."):
+
+        state = "good" # hardcoding good state. Triggers like bad spelling, or off-topic queries can set it to false.
+
+    if state=="bad":
+
+        st.write("This query does not seem to be about Breast Cancer, please try a diffferent query.") # TODO: read topic/disease from config file
+
+     # The below is two sets of Triggers for a bad state: Multi-claim queries and bad spelling. Uncomment and adjust to activate.
+
+
+        #if doc._.outcome_spellCheck:
+        #    st.write("Please try again. Perhaps you mean " + '"' + doc._.outcome_spellCheck + '"' + "?")
+        #    state = "bad"
+
+        #if len(list(doc.sents)) > 1 or " but " in claim or ",but " in claim or ",yet " in claim or ", yet" in claim or ", and "  in claim  or ",and " in claim:
+
+        #    st.write("Your input seems to contain multiple claims. Please verify one claim at a time.")
+        #    state = "bad"
+        #print("Processing...")
+
+        #if True: #else:
+
+            #params['q'] = claim
+            #response = requests.get("https://api.bing.microsoft.com/v7.0/search", headers=headers, params=params).json()
+
+
+            #if 'alteredQuery' in response['queryContext']:
+
+                #claim = spell_check(claim.lower(),response)
+
+               # claim = response['queryContext']['alteredQuery']
+
+                #st.write(f'Did you mean "{claim}" ?')
+
+                #state = "bad"
+            #print("Processing...")
+
+
+    if state=="good":
+
+        with st.spinner("Scanning Factually Health Database. This might take a few minutes..."):
+
+            topic = 1 # Leaving this here due to an earlier version of the backend that needed this. TODO: Get rid of it on the backend.
+
+            payload = {'number' : claim, 'topic': topic}
+
+            try:
+                response = requests.post(url, data=payload).json()
+            except JSONDecodeError:
+                response = []
+
+            result_string = "Done!"
+
+            #st.markdown(result_string, unsafe_allow_html=True)
+
+            #sort_type = st.sidebar.radio("Sort results by:",('Relevance','Publication Year'), index=1)
+
+            #sort_key = 'pub_year' if sort_type == "Publication Year" else "pertinence_score"
+            sort_key = "pertinence_score"
+            used_titles = []
+
+            all_responses = [article for model in response for article in response[model]]
+
+            #pub_types_available = list(set([pub_type for output in all_responses for pub_type in output['pub_type']]))
+            pub_types_available = []
+
+            #options = st.sidebar.multiselect('Filter by Publication Type:',pub_types_available)
+
+            i = 0
+
+            #responses = list(filter(lambda x: True if [pub_type for pub_type in x['pub_type'] if pub_type in options] else False, all_responses)) if options else all_responses
+
+            #pub_types_filtered = [pub_type for output in responses for pub_type in output['pub_type']]
+            pub_types_filtered = []
+
+            # This section contains the code that generates the interactive chart
+
+            #pub_type_distro = pd.DataFrame({'Publication Type' : [pub_type for pub_type in pub_types_available], 'Articles' : [pub_types_filtered.count(pub_type) for pub_type in pub_types_available]})
+
+            #chart = alt.Chart(pub_type_distro).mark_bar().encode(x=alt.X('Articles',axis=alt.Axis(labels=False)),y=alt.Y('Publication Type',axis=alt.Axis(labels=True,title="")),tooltip=['Publication Type','Articles']).interactive()
+
+            #st.sidebar.altair_chart(chart, use_container_width=True)
+
+            # Search Results start here:
+
+            st.subheader(f"Our AIs have found {len(set([x['title'] for x in all_responses]))} papers in our Database about this subject:" )
+            sorted_model = sorted(all_responses, key=lambda x: int(x[sort_key] if 'pub_year' in x else 0), reverse=True)
+
+            for outputs in sorted_model:
+
+                if outputs["title"] not in used_titles:
+
+                    i += 1
+
+                    #if "pub_year" in outputs:
+                    #    md = f'**{i}:** [{outputs["title"]}]({outputs["url"]}) ({outputs["pub_year"]})'
+                    #else:
+                    md = f'**{i}:** [{outputs["title"]}]({outputs["url"]})'
+                    #st.write(outputs['authors'])
+
+                    if "id" in outputs:
+                        md_id = f"**ID**: {outputs['id']}"
+                    else:
+                        md_id = ""
+                    if "authors" in outputs:
+                        md_aut = f"**Authors:** {' | '.join([author for author in outputs['authors']])} "
+                    else:
+                        md_aut = ""
+
+                    md2 = "<ul>" + " ".join([f"<li>{evidence}</li>" for evidence in outputs['evidence']]) + "</ul>"
+
+                    #md3 = f'\n\n[see papers that cite this paper](#)\n\n [see papers cited in this paper](#)\n\n [see more by the same authors](#)'
+
+                    st.markdown(md,unsafe_allow_html=True)
+                    st.markdown(md_id)
+                    #st.markdown(md_aut)
+                    st.markdown(md2, unsafe_allow_html = True)
+                    #st.markdown(md3)
+                    st.markdown("---")
+
+                    used_titles.append(outputs["title"])
