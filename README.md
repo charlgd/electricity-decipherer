@@ -1,7 +1,8 @@
 # Electricity Decipherer
 
-Final project for DataScience Bootcamp Le Wagon - batch #1039 - Electricity load curve decipherer  
---> [Visit the application here!](https://charlgd-electricity-decipherer-webapp-v2-interface-4anuwn.streamlit.app/)
+Final project for DataScience Bootcamp Le Wagon - batch #1039.  
+:point_right: [Visit our *HomeAIVOLT* application here to see the result!](https://charlgd-electricity-decipherer-webapp-v2-interface-4anuwn.streamlit.app/)  
+:point_right: [Watch our demo presentation here!](https://youtu.be/3jZFHTANuRQ?t=324)
 
 <img width="539" alt="image" src="https://user-images.githubusercontent.com/114239777/206294491-725c7c4a-00bf-4607-9fcd-5ad9b7c84652.png">
 
